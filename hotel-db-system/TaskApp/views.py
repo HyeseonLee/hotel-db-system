@@ -15,6 +15,7 @@ REJECTED = 1
 # 요청 아직 선택안함
 NOT_YET = 0
 
+
 class Department(Enum):
     CLEANING = "Cleaning Dept"
     BEVERAGE = "Beverage Dept"
@@ -24,6 +25,7 @@ class Department(Enum):
     PURCHASING = "Purchasing Dept"
     CENTER = "Center Dept"
 
+
 def request_send(req, type, send_user_id):
     request = None
     send_guest_id = None
@@ -31,14 +33,14 @@ def request_send(req, type, send_user_id):
     comment = req.POST['comment'] if (req.POST in 'comment') else None
     product_request_id = None
     if type in [
-        Request.RequestType.ROOM_CLEANING,
-        Request.RequestType.ROOM_SERVICE,
-        Request.RequestType.ROOM_ERROR,
-        Request.RequestType.ROOM_ETC,
-        Request.RequestType.CARRY_IN,
-        Request.RequestType.CARRY_OUT,
-        Request.RequestType.VALET_PARKING,
-        Request.RequestType.CARRY_ROOM_SERVICE,]:
+            Request.RequestType.ROOM_CLEANING,
+            Request.RequestType.ROOM_SERVICE,
+            Request.RequestType.ROOM_ERROR,
+            Request.RequestType.ROOM_ETC,
+            Request.RequestType.CARRY_IN,
+            Request.RequestType.CARRY_OUT,
+            Request.RequestType.VALET_PARKING,
+            Request.RequestType.CARRY_ROOM_SERVICE, ]:
         send_guest_id = send_user_id
     elif type == Request.RequestType.PRODUCT_PURCHASING:
         send_staff_id = send_user_id
@@ -60,10 +62,12 @@ def request_send(req, type, send_user_id):
     )
     return render(request, '', {"request_id": request.id}, status=201)
 
+
 def request_convey(request):
     request.charged_staff_id = get_optimal_request_charger_list(request)[0]
     request.status = Request.RequestStatus.WAIT_FOR_ACCEPT
     request.save()
+
 
 def request_assign(req):
     try:
@@ -78,19 +82,20 @@ def request_assign(req):
     else:
         return render(req, '', status=200)
 
+
 def request_get_department_in_charge(request):
     if request.type == Request.RequestType.ROOM_CLEANING:
         return Department.CLEANING
     elif request.type == Request.RequestType.ROOM_SERVICE:
         return Department.BEVERAGE
     elif request.type in [
-        Request.RequestType.ROOM_ERROR,
-        Request.RequestType.ROOM_ETC,]:
+            Request.RequestType.ROOM_ERROR,
+            Request.RequestType.ROOM_ETC, ]:
         return Department.FRONT_OFFICE
     elif request.type in [
-        Request.RequestType.CARRY_IN,
-        Request.RequestType.CARRY_OUT,
-        Request.RequestType.CARRY_ROOM_SERVICE]:
+            Request.RequestType.CARRY_IN,
+            Request.RequestType.CARRY_OUT,
+            Request.RequestType.CARRY_ROOM_SERVICE]:
         return Department.ROBOT
     elif request.type == Request.RequestType.VALET_PARKING:
         return Department.PARKING
@@ -99,12 +104,13 @@ def request_get_department_in_charge(request):
     elif request.type == Request.RequestType.ETC:
         return Department.CENTER
 
+
 def request_get_coordinate(request):
     if request.type in [
-        Request.RequestType.ROOM_CLEANING,
-        Request.RequestType.ROOM_ERROR,
-        Request.RequestType.ROOM_ETC,
-        Request.RequestType.CARRY_ROOM_SERVICE,]:
+            Request.RequestType.ROOM_CLEANING,
+            Request.RequestType.ROOM_ERROR,
+            Request.RequestType.ROOM_ETC,
+            Request.RequestType.CARRY_ROOM_SERVICE, ]:
         try:
             guest = Guest.objects.get(pk=request.send_guest_id)
         except Guest.DoesNotExist:
@@ -117,8 +123,8 @@ def request_get_coordinate(request):
             return None
         return get_place_coord("R" + reserve.room_id)
     elif request.type in [
-        Request.RequestType.ROOM_SERVICE,
-        Request.RequestType.CARRY_ROOM_SERVICE,]:
+            Request.RequestType.ROOM_SERVICE,
+            Request.RequestType.CARRY_ROOM_SERVICE, ]:
         return get_place_coord("Kitchen")
     elif request.type == Request.RequestType.CARRY_IN:
         return get_place_coord("Front")
@@ -134,22 +140,25 @@ def request_get_coordinate(request):
     elif request.type == Request.RequestType.ETC:
         return get_place_coord("Center")
 
+
 def get_optimal_request_charger_list(request):
     department = request_get_department_in_charge(request)
     request_coord = request_get_coordinate(request)
     if department == Department.ROBOT:
         charger_list = Robot.objects.filter(work_check=False)
         return sorted(charger_list,
-        lambda robot: (
-            robot.task_count,
-            get_distance(request_coord, convert_to_coordinate(robot.position))))
+                      lambda robot: (
+                          robot.task_count,
+                          get_distance(request_coord, convert_to_coordinate(robot.position))))
     else:
         charger_list = Staff.objects.filter(department=department)
-        charger_list = list(filter(lambda charger: cache.get((charger.staff_id, request.id), NOT_YET) == REJECTED, charger_list))
+        charger_list = list(filter(lambda charger: cache.get(
+            (charger.staff_id, request.id), NOT_YET) == REJECTED, charger_list))
         return sorted(charger_list,
-        lambda staff: (
-            staff.task_count,
-            get_distance(request_coord, convert_to_coordinate(staff.position))))
+                      lambda staff: (
+                          staff.task_count,
+                          get_distance(request_coord, convert_to_coordinate(staff.position))))
+
 
 def request_accept(req):
     try:
@@ -166,18 +175,22 @@ def request_accept(req):
         request.save()
         return render(req, '', status=200)
 
+
 def request_reject(req):
     try:
-        request = Request.objects.get(pk=req.POST["request_id"], charged_staff_id=req.POST["charged_staff_id"])
+        request = Request.objects.get(
+            pk=req.POST["request_id"], charged_staff_id=req.POST["charged_staff_id"])
     except (KeyError, Request.DoesNotExist):
         return render(req, '', status=400)
     else:
-        cache.set((req.POST["charged_staff_id"], req.POST["request_id"]), REJECTED, 60 * 60)
+        cache.set((req.POST["charged_staff_id"],
+                   req.POST["request_id"]), REJECTED, 60 * 60)
         request.charged_staff_id = None
         request.status = Request.RequestStatus.NOT_ASSIGNED
         request.save()
         request_convey(request)
         return render(req, '', status=200)
+
 
 def request_complete(req):
     try:
@@ -192,12 +205,14 @@ def request_complete(req):
     else:
         return render(req, '', status=200)
 
+
 def request_cancel(req):
     try:
         request = Request.objects.get(pk=req.POST["request_id"])
         staff = Staff.objects.get(pk=req.POST["staff_id"])
         staff.task_count = staff.task_count - 1
-        cache.set((request.charged_staff_id, req.POST["request_id"]), REJECTED, 60 * 60)
+        cache.set((request.charged_staff_id,
+                   req.POST["request_id"]), REJECTED, 60 * 60)
         request.charged_staff_id = None
         request.status = Request.RequestStatus.NOT_ASSIGNED
         request.save()
@@ -207,6 +222,7 @@ def request_cancel(req):
         return render(req, '', status=400)
     else:
         return render(req, '', status=200)
+
 
 def request_get_list(req):
     q = Q()
