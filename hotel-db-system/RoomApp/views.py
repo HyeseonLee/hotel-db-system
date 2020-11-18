@@ -23,15 +23,13 @@ def RoomListView(request):
     room_list = []
 
     for room_category in room_categories:
-        room = room_categories.get(room_category)
-        room_url = reverse('RoomApp:RoomListView', kwargs={
-                           'category': room_category})
-
-        room_list.append((room, room_url))
+        room0 = room_categories.get(room_category)
+        room_url = reverse('RoomApp:RoomDetailView', kwargs={'category': room_category})
+        room_list.append((room0, room_url))
     context = {
         "room_list": room_list,
     }
-    return render(request, 'reserve_list.html', context)
+    return render(request, 'reserve_main.html', context)
 
 
 class RoomDetailView(View):
@@ -51,20 +49,20 @@ class RoomDetailView(View):
     #     else:
     #         return HttpResponse('Category does not exist')
     def get(self, request, *args, **kwargs):
-        category = self.kwargs.get('category', None)
+        category_arg = self.kwargs.get('category', None)
         form = AvailabilityForm()
-        room_list = Room.objects.filter(category=category)
-        cate = Room.category
-        # if len(room_list) > 0:
-        # room = room_list[0]
-        # room_category = dict(room.room_type).get(room.category, None)
-        # context = {
-        #     'room_category': room_category,
-        #     'form': form,
-        # }
-        return render(request, 'reserve.html', {'cate':cate})
-        # else:
-            # return HttpResponse('Category does not exist')
+        room_list = Room.objects.filter(category=category_arg)
+        
+        if room_list.count() > 0:
+            room = room_list[0]
+            room_category = dict(room.room_type).get(room.category, None)
+            context = {
+                'room_category': room_category,
+                'form': form,
+            }
+            return render(request, 'reserve.html', context)
+        else:
+            return HttpResponse('Category does not exist')
 
     def post(self, request, *args, **kwargs):
         category = self.kwargs.get('category', None)
@@ -108,10 +106,11 @@ class RoomDetailView(View):
 
 class BookingListView(ListView):
     model = Booking
+    template_name = "reserve_list.html"
 
     def get_queryset(self, *args, **kwargs):
         booking_list = Booking.objects.all()
-        return render(request, 'RoomApp:preview')
+        return booking_list
 
 
 class CancelBookingView(DeleteView):
