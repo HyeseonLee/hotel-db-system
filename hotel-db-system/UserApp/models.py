@@ -58,7 +58,7 @@ class Staff(models.Model):
         max_length=3, choices=department_type, default="None")
 
     def __str__(self):
-        return f'ID: {self.staff_id} NAME: {self.first_name} {self.last_name} DEPARTMENT: {self.department}'
+        return f'ID: {self.staff_id} NAME: {self.first_name} {self.last_name} DEPARTMENT: {self.department}  '
 
     class Meta:
         db_table = 'staff'
