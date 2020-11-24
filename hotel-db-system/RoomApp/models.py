@@ -24,29 +24,29 @@ class Room(models.Model):
     beds = models.IntegerField()#참고한 프로젝트에 있어서 일단 추가함.
 
     def __str__(self):
-        return f'{self.room_id}. {dict(self.room_type)[self.category]} Beds = {self.beds} People = {self.room_limit}'
+        return f'{self.room_id}. {dict(self.room_type)[self.category]} Beds = {self.beds} People = {self.room_limit} Price = {self.room_fee}'
 
 
 
 class Booking(models.Model):
-    booking_roomid = models.ForeignKey(Room, null=True, on_delete=models.CASCADE)
+    booking_roomid = models.ForeignKey(Room, null=True, on_delete=models.SET_NULL)
     booking_userid = models.ForeignKey(Guest, on_delete=models.CASCADE)
-    room_type = models.CharField(max_length=10)
-    check_in = models.DateTimeField(auto_now=True)
-    check_out = models.DateTimeField(auto_now=True)
-    check_in_date = models.DateTimeField(auto_now=True)
-    check_out_date = models.DateTimeField(auto_now=True)
+    # room_type = Room.objects.select_related().filter(room_id = booking_roomid)
+    check_in = models.DateTimeField()
+    check_out = models.DateTimeField()
+    check_in_date = models.DateTimeField()
+    check_out_date = models.DateTimeField()
 
     def __str__(self):
         return f'From = {self.check_in.strftime("%d-%b-%Y %H:%M")} To = {self.check_out.strftime("%d-%b-%Y %H:%M")}'
 
     def get_room_category(self):
         room_categories = dict(self.room.room_type)
-        room_category = room_categories.get(self.room.category)
-        return room_category
+        room_type = room_categories.get(self.room.category)
+        return room_type
 
-    def get_cancel_booking_url(self):
-        return reverse_lazy('hotel:CancelBookingView', args=[self.pk, ])
+    # def get_cancel_booking_url(self):
+    #     return reverse_lazy('hotel:CancelBookingView', args=[self.pk, ])
 
 class Bill(models.Model):
     bill_room = models.ForeignKey(Room, on_delete=models.CASCADE)
