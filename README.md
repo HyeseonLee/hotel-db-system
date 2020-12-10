@@ -1,1 +1,1 @@
-# hotel-db-system
+# 2020-2 데이터베이스 PBL 6조
